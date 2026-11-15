@@ -68,6 +68,36 @@ svg{display:block;width:100%;height:auto;cursor:crosshair}
 .legend button.on em{background:var(--gold);color:#1f3a33}
 .hint{color:var(--muted);font-size:.9rem;margin:0}
 [hidden]{display:none!important}
+.giro{display:none}
+@media (max-width:640px){
+  body{font-size:15px;padding-block:10px}
+  .wrap{gap:8px}
+  h1{font-size:1.45rem}
+  header .row button{padding:4px 12px;font-size:.9rem}
+  .q{padding:10px 12px;gap:8px;border-radius:12px}
+  .qtop{gap:6px}
+  .q p{font-size:.95rem;width:100%}
+  .q b{font-size:1.45rem}
+  .msg{font-size:.95rem;min-height:1.2em}
+  .stats{width:100%;font-size:1.05rem;gap:6px}
+  .chip{padding:2px 10px}
+  #bNext{margin-left:auto;padding:8px 18px;font-size:1.05rem}
+  .mapbox{border-radius:12px;margin-inline:-6px}
+  .zoom{top:auto;bottom:6px;right:6px;flex-direction:row;gap:4px}
+  .zoom button{width:34px;height:34px;font-size:1.1rem}
+  .zoom button.txt{padding:0 8px;font-size:.8rem}
+  .legend{gap:6px}
+  .legend button{font-size:.85rem;padding:3px 10px 3px 3px}
+  .legend button em{min-width:22px;height:22px}
+  .legend button small{display:none}
+  .hint{font-size:.8rem}
+}
+@media (max-width:640px) and (orientation:portrait){.giro{display:block;text-align:center;font-size:.85rem;color:var(--muted);margin:0}}
+@media (max-height:500px) and (orientation:landscape){
+  body{padding-block:6px} .wrap{gap:6px} header{display:none}
+  .q{padding:6px 12px} .q b{font-size:1.2rem} .bar{height:6px}
+  .mapbox{max-height:calc(100vh - 140px)} svg{max-height:calc(100vh - 140px)}
+}
 .conf{position:absolute;width:10px;height:10px;border-radius:2px;pointer-events:none;animation:fly .9s ease-out forwards}
 @keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
 .big{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:5rem;animation:bigpop .8s ease-out forwards}
@@ -89,10 +119,10 @@ svg{display:block;width:100%;height:auto;cursor:crosshair}
   <div class="bar"><i id="prog"></i></div>
 </div>
 <div class="mapbox" id="mapbox"><svg id="map" viewBox="0 0 960 470" aria-label="Mapa del mundo"></svg>
-  <div class="zoom"><button id="zin" aria-label="Acercar">+</button><button id="zout" aria-label="Alejar">−</button><button id="zeu" class="txt">Europa</button><button id="zall" class="txt">Mundo</button></div>
 </div>
 <div class="legend" id="legend" hidden></div>
-<p class="hint" id="hint">Pellizca o usa + / − para hacer zoom (Europa es pequeña). Si aciertas sale en verde; si fallas, te enseña en rosa dónde estaba.</p>
+<p class="giro">📱↻ Gira el móvil para ver el mapa más grande</p>
+<p class="hint" id="hint">Pellizca o usa la rueda del ratón para hacer zoom (Europa es pequeña). Si aciertas sale en verde; si fallas, te enseña en rosa dónde estaba.</p>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -127,15 +157,18 @@ world.append("path").attr("class","land").attr("d",path(land));
 const capa=world.append("g");
 const line=d3.line().curve(d3.curveCatmullRom);
 const pts=m=>m.p.map(proj);
-let K=1;
+let K=1,U=1;
+function calcU(){const w=svg.node().getBoundingClientRect().width||W;U=Math.min(2.6,Math.max(1,W/w));}
+calcU();
+addEventListener("resize",()=>{calcU();escala()});
 const zoom=d3.zoom().scaleExtent([1,8]).translateExtent([[0,0],[W,H]]).on("zoom",e=>{world.attr("transform",e.transform);K=e.transform.k;escala()});
 svg.call(zoom).on("dblclick.zoom",null);
 function escala(){
-  capa.selectAll(".range").attr("stroke-width",d=>10/K);
-  capa.selectAll(".lbl").attr("font-size",16/K).attr("stroke-width",4/K);
-  capa.selectAll(".peakg").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${1/K})`});
-  capa.selectAll(".num").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${1/K})`});
-  capa.selectAll(".tap").attr("r",7/K).attr("stroke-width",2/K);
+  capa.selectAll(".range").attr("stroke-width",d=>10*U/K);
+  capa.selectAll(".lbl").attr("font-size",16*U/K).attr("stroke-width",4*U/K);
+  capa.selectAll(".peakg").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${U/K})`});
+  capa.selectAll(".num").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${U/K})`});
+  capa.selectAll(".tap").attr("r",7*U/K).attr("stroke-width",2*U/K);
 }
 function irA(b,pad=60){ // b=[[x0,y0],[x1,y1]]
   const [[x0,y0],[x1,y1]]=b,k=Math.min(6,0.8/Math.max((x1-x0+pad)/W,(y1-y0+pad)/H));
@@ -145,20 +178,20 @@ function irA(b,pad=60){ // b=[[x0,y0],[x1,y1]]
 function bboxM(m){const ps=pts(m);return [[d3.min(ps,p=>p[0]),d3.min(ps,p=>p[1])],[d3.max(ps,p=>p[0]),d3.max(ps,p=>p[1])]]}
 function dibuja(m,cls,opts={}){
   const g=capa.append("g");
-  const pa=g.append("path").attr("class","range "+cls).attr("d",line(pts(m))).attr("stroke-width",10/K);
+  const pa=g.append("path").attr("class","range "+cls).attr("d",line(pts(m))).attr("stroke-width",10*U/K);
   const L=pa.node().getTotalLength();
   pa.attr("stroke-dasharray",L).attr("stroke-dashoffset",L).transition().duration(700).attr("stroke-dashoffset",0);
   // montañitas a lo largo
-  const step=Math.max(10,L/12);
+  const step=Math.max(10*U/K,L/12);
   for(let s=0,i=0;s<=L;s+=step,i++){
     const pt=pa.node().getPointAtLength(s);
-    const pg=g.append("g").attr("class","peakg").attr("data-xy",pt.x+","+pt.y).attr("transform",`translate(${pt.x},${pt.y}) scale(${1/K})`);
+    const pg=g.append("g").attr("class","peakg").attr("data-xy",pt.x+","+pt.y).attr("transform",`translate(${pt.x},${pt.y}) scale(${U/K})`);
     pg.append("path").attr("class","peak "+cls).attr("d","M-7,5L0,-8L7,5Z").attr("opacity",0)
       .transition().delay(i*700/(L/step)).duration(250).attr("opacity",1);
   }
   const ps=pts(m),mid=ps[Math.floor(ps.length/2)];
-  if(opts.label!==false) g.append("text").attr("class","lbl").attr("x",mid[0]+12/K).attr("y",mid[1]+5/K).attr("font-size",16/K).attr("stroke-width",4/K).text(m.n);
-  if(opts.num){const ng=g.append("g").attr("class","num").attr("data-xy",mid.join(",")).attr("transform",`translate(${mid}) scale(${1/K})`);
+  if(opts.label!==false) g.append("text").attr("class","lbl").attr("x",mid[0]+12*U/K).attr("y",mid[1]+5*U/K).attr("font-size",16*U/K).attr("stroke-width",4*U/K).text(m.n);
+  if(opts.num){const ng=g.append("g").attr("class","num").attr("data-xy",mid.join(",")).attr("transform",`translate(${mid}) scale(${U/K})`);
     ng.append("circle").attr("r",11).attr("stroke-width",2);ng.append("text").attr("font-size",13).text(opts.num);
     ng.on("click",ev=>{ev.stopPropagation();enfoca(opts.num-1)});}
   return g;
@@ -192,9 +225,9 @@ svg.on("click",ev=>{
   if(modo!=="jugar"||esperando||!actual)return;
   const p=d3.pointer(ev,world.node()),r=box.getBoundingClientRect(),cx=ev.clientX-r.left,cy=ev.clientY-r.top;
   hechas++;
-  if(dist(p,actual)<30/Math.sqrt(K)){ok++;racha++;dibuja(actual,"ok");confeti(cx,cy);grande(racha>=3?"🔥":"⭐");
+  if(dist(p,actual)<30*U/Math.sqrt(K)){ok++;racha++;dibuja(actual,"ok");confeti(cx,cy);grande(racha>=3?"🔥":"⭐");
     $("msg").textContent=racha>=3?`¡Increíble! ${racha} seguidas 🔥`:"¡Muy bien! ✔";$("msg").className="msg ok";}
-  else{racha=0;capa.append("circle").attr("class","tap").attr("cx",p[0]).attr("cy",p[1]).attr("r",7/K).attr("stroke-width",2/K);
+  else{racha=0;capa.append("circle").attr("class","tap").attr("cx",p[0]).attr("cy",p[1]).attr("r",7*U/K).attr("stroke-width",2*U/K);
     dibuja(actual,"show");box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake");
     $("msg").textContent="Casi… están aquí, en "+actual.c;$("msg").className="msg bad";
     setTimeout(()=>irA(bboxM(actual),200),450);}
@@ -218,10 +251,6 @@ function setModo(m){modo=m;$("bJugar").classList.toggle("on",m==="jugar");$("bEs
     $("nombre").textContent="¿Cuál quieres ver?";$("msg").textContent="";$("bNext").hidden=true;}
   else nueva();}
 $("bJugar").onclick=()=>setModo("jugar");$("bEstudiar").onclick=()=>setModo("estudiar");
-$("zin").onclick=()=>svg.transition().duration(400).call(zoom.scaleBy,1.6);
-$("zout").onclick=()=>svg.transition().duration(400).call(zoom.scaleBy,1/1.6);
-$("zall").onclick=()=>svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity);
-$("zeu").onclick=()=>irA([proj([-10,36]),proj([45,71])].map((p,i,a)=>p).reduce((acc,p)=>[[Math.min(acc[0][0],p[0]),Math.min(acc[0][1],p[1])],[Math.max(acc[1][0],p[0]),Math.max(acc[1][1],p[1])]],[[1e9,1e9],[-1e9,-1e9]]),0);
 nueva();
 </script>
 
