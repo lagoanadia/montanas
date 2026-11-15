@@ -1,60 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Montañas del Mundo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;700&display=swap">
 <style>
-/* Layout: atlas page — question bar on top, big map, score chips below */
+/* Layout: question bar + progress, zoomable map with mountain icons, numbered legend chips */
 :root{
   --bg:#f3f7f4; --fg:#1f3a33; --muted:#5d746c;
   --sea:#bfe3f2; --land:#c9de8f; --landEdge:#9bb862;
-  --pink:#e0559a; --ok:#2f9e5b; --bad:#d64545; --card:#ffffff;
+  --pink:#e0559a; --ok:#2f9e5b; --bad:#d64545; --card:#ffffff; --gold:#f2b636;
   --display:"Baloo 2", "Trebuchet MS", system-ui, sans-serif;
   --body:"Nunito", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#13201d; --fg:#e6f2ec; --muted:#9db5ac; --sea:#1d4253; --land:#5f7a3a; --landEdge:#7f9c55;
-  --pink:#f07ab5; --ok:#4fc27e; --bad:#f06b6b; --card:#1c2d29; color-scheme:dark}}
+  --pink:#f07ab5; --ok:#4fd27e; --bad:#f06b6b; --card:#1c2d29; --gold:#f5c451; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#13201d; --fg:#e6f2ec; --muted:#9db5ac; --sea:#1d4253; --land:#5f7a3a; --landEdge:#7f9c55;
-  --pink:#f07ab5; --ok:#4fc27e; --bad:#f06b6b; --card:#1c2d29; color-scheme:dark}
+  --pink:#f07ab5; --ok:#4fd27e; --bad:#f06b6b; --card:#1c2d29; --gold:#f5c451; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
 .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(1.6rem,4vw,2.4rem);margin:0;line-height:1;color:var(--pink)}
 h1 span{color:var(--fg)}
-.modes{display:flex;gap:6px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
 button{font-family:var(--display);font-weight:600;font-size:1rem;border:2px solid var(--fg);background:var(--card);color:var(--fg);
-  border-radius:999px;padding:6px 16px;cursor:pointer}
+  border-radius:999px;padding:6px 16px;cursor:pointer;transition:transform .15s}
+button:hover{transform:translateY(-2px)}
 button.on,button.main{background:var(--fg);color:var(--bg)}
 button:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
-.q{background:var(--card);border-radius:16px;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
-.q p{margin:0;font-size:1.1rem}
-.q b{font-family:var(--display);font-size:1.6rem;color:var(--pink);display:block;line-height:1.1}
-.msg{font-weight:700}
+.q{background:var(--card);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.qtop{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}
+.q p{margin:0;font-size:1.05rem;min-width:0}
+.q b{font-family:var(--display);font-size:clamp(1.5rem,4vw,2rem);color:var(--pink);display:block;line-height:1.1}
+.msg{font-weight:700;display:block;min-height:1.4em}
 .msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
-.score{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums}
-.mapbox{background:var(--sea);border-radius:16px;overflow:hidden;touch-action:manipulation}
+.stats{display:flex;gap:10px;align-items:center;font-family:var(--display);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.chip{background:var(--bg);border-radius:999px;padding:2px 12px}
+.bar{height:10px;border-radius:99px;background:var(--bg);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--gold));transition:width .5s}
+.mapbox{position:relative;background:var(--sea);border-radius:16px;overflow:hidden;touch-action:none}
+.mapbox.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:40px;height:40px;padding:0;font-size:1.3rem}
+.zoom button.txt{width:auto;padding:0 10px;font-size:.85rem}
 svg{display:block;width:100%;height:auto;cursor:crosshair}
-.land{fill:var(--land);stroke:var(--landEdge);stroke-width:.6}
-.grat{fill:none;stroke:var(--fg);stroke-opacity:.08}
-.range{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:8;stroke-opacity:.85}
+.land{fill:var(--land);stroke:var(--landEdge);stroke-width:.6;vector-effect:non-scaling-stroke}
+.grat{fill:none;stroke:var(--fg);stroke-opacity:.08;vector-effect:non-scaling-stroke}
+.range{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:.55}
 .range.ok{stroke:var(--ok)} .range.show{stroke:var(--pink)}
-.lbl{font-family:var(--display);font-weight:800;font-size:15px;fill:var(--fg);paint-order:stroke;stroke:var(--bg);stroke-width:4px}
-.tap{fill:var(--bad)}
+.peak{stroke:var(--fg);stroke-width:.6;stroke-opacity:.5}
+.peak.ok{fill:var(--ok)} .peak.show{fill:var(--pink)}
+.lbl{font-family:var(--display);font-weight:800;fill:var(--fg);paint-order:stroke;stroke:var(--bg);stroke-linejoin:round}
+.num circle{fill:var(--fg);stroke:var(--bg)} .num text{fill:var(--bg);font-family:var(--display);font-weight:800;text-anchor:middle;dominant-baseline:central}
+.num{cursor:pointer}
+.tap{fill:var(--bad);stroke:var(--bg)}
+.ring{fill:none;stroke:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.legend button{font-size:.95rem;padding:4px 12px 4px 4px;display:flex;align-items:center;gap:6px;border-width:2px}
+.legend button em{font-style:normal;background:var(--pink);color:#fff;border-radius:99px;min-width:26px;height:26px;display:grid;place-items:center}
+.legend button small{color:var(--muted);font-family:var(--body)}
+.legend button.on em{background:var(--gold);color:#1f3a33}
 .hint{color:var(--muted);font-size:.9rem;margin:0}
-@media (prefers-reduced-motion:no-preference){.range{animation:pop .4s ease-out}@keyframes pop{from{stroke-width:22;opacity:0}}}
+[hidden]{display:none!important}
+.conf{position:absolute;width:10px;height:10px;border-radius:2px;pointer-events:none;animation:fly .9s ease-out forwards}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
+.big{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:5rem;animation:bigpop .8s ease-out forwards}
+@keyframes bigpop{from{transform:scale(.3);opacity:1}60%{transform:scale(1.2);opacity:1}to{transform:scale(1.4);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+</head>
+<body>
 <div class="wrap">
 <header>
   <h1>Montañas <span>del Mundo</span></h1>
-  <div class="modes"><button id="bJugar" class="on">Jugar</button><button id="bEstudiar">Estudiar</button></div>
+  <div class="row"><button id="bJugar" class="on">🎮 Jugar</button><button id="bEstudiar">📖 Estudiar</button></div>
 </header>
 <div class="q">
-  <p id="pregunta">Toca en el mapa dónde están:<b id="nombre">…</b><span id="msg" class="msg"></span></p>
-  <div style="display:flex;gap:10px;align-items:center"><span class="score" id="score">⭐ 0 / 0</span><button id="bNext" class="main" hidden>Siguiente ➜</button></div>
+  <div class="qtop">
+    <p><span id="pre">Toca en el mapa dónde están:</span><b id="nombre">…</b><span id="msg" class="msg"></span></p>
+    <div class="stats"><span class="chip" id="score">⭐ 0</span><span class="chip" id="racha">🔥 0</span><button id="bNext" class="main" hidden>Siguiente ➜</button></div>
+  </div>
+  <div class="bar"><i id="prog"></i></div>
 </div>
-<div class="mapbox"><svg id="map" viewBox="0 0 960 470" aria-label="Mapa del mundo"></svg></div>
-<p class="hint">Toca cerca de la cordillera. Si aciertas se pinta en verde; si fallas, te enseña en rosa dónde estaba.</p>
+<div class="mapbox" id="mapbox"><svg id="map" viewBox="0 0 960 470" aria-label="Mapa del mundo"></svg>
+  <div class="zoom"><button id="zin" aria-label="Acercar">+</button><button id="zout" aria-label="Alejar">−</button><button id="zeu" class="txt">Europa</button><button id="zall" class="txt">Mundo</button></div>
+</div>
+<div class="legend" id="legend" hidden></div>
+<p class="hint" id="hint">Pellizca o usa + / − para hacer zoom (Europa es pequeña). Si aciertas sale en verde; si fallas, te enseña en rosa dónde estaba.</p>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -81,54 +119,111 @@ const MONTES=[
 ];
 const svg=d3.select("#map"),W=960,H=470;
 const land=topojson.feature(LAND,LAND.objects.land);
-const proj=d3.geoEquirectangular().fitExtent([[8,8],[W-8,H-8]],{type:"Sphere"});
-proj.clipExtent([[0,0],[W,H]]);
+const proj=d3.geoEquirectangular().fitExtent([[6,6],[W-6,H-6]],{type:"MultiPoint",coordinates:[[-170,-58],[180,84]]});
 const path=d3.geoPath(proj);
-// Recortar Antártida: centrar en latitudes -58..84
-proj.fitExtent([[6,6],[W-6,H-6]],{type:"MultiPoint",coordinates:[[-170,-58],[180,84]]});
-svg.append("path").attr("class","grat").attr("d",path(d3.geoGraticule10()));
-svg.append("path").attr("class","land").attr("d",path(land));
-const capa=svg.append("g");
-const line=d3.line();
+const world=svg.append("g");
+world.append("path").attr("class","grat").attr("d",path(d3.geoGraticule10()));
+world.append("path").attr("class","land").attr("d",path(land));
+const capa=world.append("g");
+const line=d3.line().curve(d3.curveCatmullRom);
 const pts=m=>m.p.map(proj);
-function dibuja(m,cls){
-  capa.append("path").attr("class","range "+cls).attr("d",line(pts(m)));
+let K=1;
+const zoom=d3.zoom().scaleExtent([1,8]).translateExtent([[0,0],[W,H]]).on("zoom",e=>{world.attr("transform",e.transform);K=e.transform.k;escala()});
+svg.call(zoom).on("dblclick.zoom",null);
+function escala(){
+  capa.selectAll(".range").attr("stroke-width",d=>10/K);
+  capa.selectAll(".lbl").attr("font-size",16/K).attr("stroke-width",4/K);
+  capa.selectAll(".peakg").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${1/K})`});
+  capa.selectAll(".num").attr("transform",function(){const [x,y]=this.dataset.xy.split(",");return `translate(${x},${y}) scale(${1/K})`});
+  capa.selectAll(".tap").attr("r",7/K).attr("stroke-width",2/K);
+}
+function irA(b,pad=60){ // b=[[x0,y0],[x1,y1]]
+  const [[x0,y0],[x1,y1]]=b,k=Math.min(6,0.8/Math.max((x1-x0+pad)/W,(y1-y0+pad)/H));
+  const t=d3.zoomIdentity.translate(W/2,H/2).scale(Math.max(1,k)).translate(-(x0+x1)/2,-(y0+y1)/2);
+  svg.transition().duration(900).call(zoom.transform,t);
+}
+function bboxM(m){const ps=pts(m);return [[d3.min(ps,p=>p[0]),d3.min(ps,p=>p[1])],[d3.max(ps,p=>p[0]),d3.max(ps,p=>p[1])]]}
+function dibuja(m,cls,opts={}){
+  const g=capa.append("g");
+  const pa=g.append("path").attr("class","range "+cls).attr("d",line(pts(m))).attr("stroke-width",10/K);
+  const L=pa.node().getTotalLength();
+  pa.attr("stroke-dasharray",L).attr("stroke-dashoffset",L).transition().duration(700).attr("stroke-dashoffset",0);
+  // montañitas a lo largo
+  const step=Math.max(10,L/12);
+  for(let s=0,i=0;s<=L;s+=step,i++){
+    const pt=pa.node().getPointAtLength(s);
+    const pg=g.append("g").attr("class","peakg").attr("data-xy",pt.x+","+pt.y).attr("transform",`translate(${pt.x},${pt.y}) scale(${1/K})`);
+    pg.append("path").attr("class","peak "+cls).attr("d","M-7,5L0,-8L7,5Z").attr("opacity",0)
+      .transition().delay(i*700/(L/step)).duration(250).attr("opacity",1);
+  }
   const ps=pts(m),mid=ps[Math.floor(ps.length/2)];
-  const x=Math.min(Math.max(mid[0]+12,4),W-180);
-  capa.append("text").attr("class","lbl").attr("x",x).attr("y",mid[1]+5).text(m.n);
+  if(opts.label!==false) g.append("text").attr("class","lbl").attr("x",mid[0]+12/K).attr("y",mid[1]+5/K).attr("font-size",16/K).attr("stroke-width",4/K).text(m.n);
+  if(opts.num){const ng=g.append("g").attr("class","num").attr("data-xy",mid.join(",")).attr("transform",`translate(${mid}) scale(${1/K})`);
+    ng.append("circle").attr("r",11).attr("stroke-width",2);ng.append("text").attr("font-size",13).text(opts.num);
+    ng.on("click",ev=>{ev.stopPropagation();enfoca(opts.num-1)});}
+  return g;
 }
 function distSeg(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy;
   let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=Math.max(0,Math.min(1,t));
   return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);}
 function dist(p,m){const ps=pts(m);let d=Infinity;for(let i=0;i<ps.length-1;i++)d=Math.min(d,distSeg(p,ps[i],ps[i+1]));return d;}
 const $=id=>document.getElementById(id);
-let cola=[],actual=null,ok=0,hechas=0,esperando=false,modo="jugar";
+const box=$("mapbox");
+function confeti(cx,cy){const cols=["#e0559a","#f2b636","#2f9e5b","#4aa3df","#ff7b39"];
+  for(let i=0;i<40;i++){const d=document.createElement("i");d.className="conf";d.style.left=cx+"px";d.style.top=cy+"px";
+    d.style.background=cols[i%5];const a=Math.random()*6.28,r=60+Math.random()*140;
+    d.style.setProperty("--dx",Math.cos(a)*r+"px");d.style.setProperty("--dy",Math.sin(a)*r+60+"px");box.appendChild(d);setTimeout(()=>d.remove(),1000)}}
+function grande(t){const d=document.createElement("div");d.className="big";d.textContent=t;box.appendChild(d);setTimeout(()=>d.remove(),850)}
+let cola=[],actual=null,ok=0,hechas=0,racha=0,esperando=false,modo="jugar",N=MONTES.length;
 function mezcla(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
-function nueva(){cola=mezcla(MONTES);ok=0;hechas=0;siguiente()}
+function stats(){$("score").textContent=`⭐ ${ok}/${hechas}`;$("racha").textContent=`🔥 ${racha}`;$("prog").style.width=(hechas/N*100)+"%"}
+function nueva(){cola=mezcla(MONTES);ok=0;hechas=0;racha=0;siguiente()}
 function siguiente(){
   capa.selectAll("*").remove();$("msg").textContent="";$("msg").className="msg";$("bNext").hidden=true;
-  if(!cola.length){actual=null;$("pregunta").firstChild.textContent="¡Terminaste! ";
+  svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity);
+  if(!cola.length){actual=null;$("pre").textContent="¡Terminaste! ";
     $("nombre").textContent=`Has acertado ${ok} de ${hechas} ${ok>=hechas-2?"🏆":"💪"}`;
-    $("bNext").textContent="Jugar otra vez";$("bNext").hidden=false;esperando=true;return}
-  $("pregunta").firstChild.textContent="Toca en el mapa dónde están:";
-  actual=cola.pop();$("nombre").textContent=actual.n;$("bNext").textContent="Siguiente ➜";esperando=false;
-  $("score").textContent=`⭐ ${ok} / ${hechas}`;
+    if(ok>=hechas-2){const r=box.getBoundingClientRect();for(let i=0;i<3;i++)setTimeout(()=>confeti(Math.random()*r.width,r.height/3),i*250)}
+    $("bNext").textContent="Jugar otra vez";$("bNext").hidden=false;esperando=true;stats();return}
+  $("pre").textContent="Toca en el mapa dónde están:";
+  actual=cola.pop();$("nombre").textContent=actual.n;$("bNext").textContent="Siguiente ➜";esperando=false;stats();
 }
 svg.on("click",ev=>{
   if(modo!=="jugar"||esperando||!actual)return;
-  const p=d3.pointer(ev,svg.node());
+  const p=d3.pointer(ev,world.node()),r=box.getBoundingClientRect(),cx=ev.clientX-r.left,cy=ev.clientY-r.top;
   hechas++;
-  if(dist(p,actual)<32){ok++;dibuja(actual,"ok");$("msg").textContent=" ¡Muy bien! ✔";$("msg").className="msg ok";}
-  else{capa.append("circle").attr("class","tap").attr("cx",p[0]).attr("cy",p[1]).attr("r",7);
-    dibuja(actual,"show");$("msg").textContent=" Casi… están aquí (en rosa) — "+actual.c;$("msg").className="msg bad";}
-  $("score").textContent=`⭐ ${ok} / ${hechas}`;esperando=true;$("bNext").hidden=false;$("bNext").focus();
+  if(dist(p,actual)<30/Math.sqrt(K)){ok++;racha++;dibuja(actual,"ok");confeti(cx,cy);grande(racha>=3?"🔥":"⭐");
+    $("msg").textContent=racha>=3?`¡Increíble! ${racha} seguidas 🔥`:"¡Muy bien! ✔";$("msg").className="msg ok";}
+  else{racha=0;capa.append("circle").attr("class","tap").attr("cx",p[0]).attr("cy",p[1]).attr("r",7/K).attr("stroke-width",2/K);
+    dibuja(actual,"show");box.classList.remove("shake");void box.offsetWidth;box.classList.add("shake");
+    $("msg").textContent="Casi… están aquí, en "+actual.c;$("msg").className="msg bad";
+    setTimeout(()=>irA(bboxM(actual),200),450);}
+  stats();esperando=true;$("bNext").hidden=false;$("bNext").focus();
 });
 $("bNext").onclick=()=>{if(!cola.length&&!actual)nueva();else siguiente()};
-function setModo(m){modo=m;$("bJugar").classList.toggle("on",m==="jugar");$("bEstudiar").classList.toggle("on",m==="estudiar");
+// Estudiar
+function enfoca(i){
+  [...$("legend").children].forEach((b,j)=>b.classList.toggle("on",j===i));
   capa.selectAll("*").remove();
-  if(m==="estudiar"){MONTES.forEach(x=>dibuja(x,"show"));$("pregunta").firstChild.textContent="Estudia: aquí están todas";
-    $("nombre").textContent="Pulsa «Jugar» cuando estés lista";$("msg").textContent="";$("bNext").hidden=true;}
+  MONTES.forEach((m,j)=>{if(j!==i)dibuja(m,"show",{label:false,num:j+1})});
+  dibuja(MONTES[i],"ok",{num:i+1});
+  $("nombre").textContent=MONTES[i].n;$("msg").textContent=MONTES[i].c;$("msg").className="msg ok";
+  irA(bboxM(MONTES[i]),220);
+}
+MONTES.forEach((m,i)=>{const b=document.createElement("button");b.innerHTML=`<em>${i+1}</em>${m.n} <small>${m.c}</small>`;b.onclick=()=>enfoca(i);$("legend").appendChild(b)});
+function setModo(m){modo=m;$("bJugar").classList.toggle("on",m==="jugar");$("bEstudiar").classList.toggle("on",m==="estudiar");
+  $("legend").hidden=m!=="estudiar";capa.selectAll("*").remove();
+  if(m==="estudiar"){svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity);
+    MONTES.forEach((x,i)=>dibuja(x,"show",{label:false,num:i+1}));$("pre").textContent="Estudia: toca un número o un nombre";
+    $("nombre").textContent="¿Cuál quieres ver?";$("msg").textContent="";$("bNext").hidden=true;}
   else nueva();}
 $("bJugar").onclick=()=>setModo("jugar");$("bEstudiar").onclick=()=>setModo("estudiar");
+$("zin").onclick=()=>svg.transition().duration(400).call(zoom.scaleBy,1.6);
+$("zout").onclick=()=>svg.transition().duration(400).call(zoom.scaleBy,1/1.6);
+$("zall").onclick=()=>svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity);
+$("zeu").onclick=()=>irA([proj([-10,36]),proj([45,71])].map((p,i,a)=>p).reduce((acc,p)=>[[Math.min(acc[0][0],p[0]),Math.min(acc[0][1],p[1])],[Math.max(acc[1][0],p[0]),Math.max(acc[1][1],p[1])]],[[1e9,1e9],[-1e9,-1e9]]),0);
 nueva();
 </script>
+
+</body>
+</html>
